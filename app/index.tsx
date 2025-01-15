@@ -28,12 +28,27 @@ export default function EventList() {
     return (
       <View style={styles.eventCard}>
         <View style={styles.organizerSection}>
-          <Image 
-            source={{ uri: event.organizer.imageUrl }} 
-            style={styles.organizerImage}
-          />
+          {event.organizer.imageUrl ? (
+            <Image 
+              source={{ uri: event.organizer.imageUrl }}
+              style={styles.organizerImage}
+              onError={(error) => console.warn('Error loading organizer image:', error.nativeEvent.error)}
+            />
+          ) : (
+            <View style={[styles.organizerImage, styles.placeholderImage]} />
+          )}
           <Text style={styles.organizerName}>{event.organizer.name}</Text>
         </View>
+        {event.images.poster ? (
+          <Image
+            source={{ uri: event.images.poster }}
+            style={styles.eventImage}
+            resizeMode="cover"
+            onError={(error) => console.warn('Error loading event image:', error.nativeEvent.error)}
+          />
+        ) : (
+          <View style={[styles.eventImage, styles.placeholderImage]} />
+        )}
         <Text style={styles.title}>{event.title}</Text>
         <Text style={styles.date}>{format(event.date, 'PPP')}</Text>
         <Text style={styles.location}>{event.location.name}</Text>
@@ -110,6 +125,15 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 8,
+  },
+  eventImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  placeholderImage: {
+    backgroundColor: '#f0f0f0',
   },
   organizerName: {
     fontSize: 16,
