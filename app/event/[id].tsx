@@ -1,13 +1,15 @@
 import { View, StyleSheet, Image, ScrollView, Linking, Platform, StatusBar } from 'react-native';
 import { Text, Button, IconButton } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Event } from '../../src/services/eventService';
+import { format } from 'date-fns';
 
 export default function EventDetail() {
   const params = useLocalSearchParams();
   const router = useRouter();
   
   // Parse the event data from params
-  const event = JSON.parse(params.event as string);
+  const event = JSON.parse(params.event as string) as Event;
   
   return (
     <View style={styles.container}>
@@ -15,31 +17,21 @@ export default function EventDetail() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
           <Image
-            source={typeof event.imageUrl === 'string' 
-              ? { uri: event.imageUrl } 
-              : event.imageUrl
-            }
+            source={{ uri: event.images.poster }}
             style={styles.backgroundImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
 
         <View style={styles.detailsSection}>
           <Text style={styles.eventTitle}>{event.title}</Text>
           <Text style={styles.eventTime}>
-            {new Date(event.date).toLocaleDateString('en-IE', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true
-            })}
+            {format(new Date(event.date), 'EEEE, MMMM d, h:mm a')}
           </Text>
-          <Text style={styles.eventVenue}>{event.location}</Text>
+          <Text style={styles.eventVenue}>{event.location.name}</Text>
           
           <Text style={styles.descriptionTitle}>Description</Text>
-          <Text style={styles.descriptionText}>{event.description}</Text>
+          <Text style={styles.descriptionText}>{event.description.full}</Text>
         </View>
       </ScrollView>
 
@@ -73,10 +65,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   imageContainer: {
-    height: 600,
+    height: 300,
     position: 'relative',
     zIndex: 1,
-    marginTop: -50,
     backgroundColor: '#000',
   },
   backgroundImage: {
@@ -91,36 +82,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     elevation: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  titleContainer: {
-    backgroundColor: '#FFCC00',
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  bandName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  venueName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  dateTime: {
-    fontSize: 16,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: '#fff',
-    textAlign: 'center',
   },
   detailsSection: {
     padding: 16,
@@ -150,6 +111,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     marginBottom: 24,
+    lineHeight: 24,
   },
   websiteButton: {
     backgroundColor: '#6366f1',
@@ -159,24 +121,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  organizerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  organizerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  organizerName: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
   scrollContent: {
     paddingBottom: 100,
-    flexGrow: 1,
   },
   floatingButtonContainer: {
     position: 'absolute',
