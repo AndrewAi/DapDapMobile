@@ -17,6 +17,10 @@ export interface Event {
     short: string;
     full: string;
   };
+  images: {
+    poster: string;
+    gallery: string[];
+  };
   organizer: {
     name: string;
     imageUrl: string;
@@ -32,6 +36,16 @@ export async function getEvents(): Promise<Event[]> {
       return {
         ...data,
         date: data.date.toDate(), // Convert Firestore Timestamp to Date
+        // Ensure images object exists
+        images: {
+          poster: data.images?.poster || '',
+          gallery: data.images?.gallery || [],
+        },
+        // Ensure organizer object exists
+        organizer: {
+          name: data.organizer?.name || 'Unknown Organizer',
+          imageUrl: data.organizer?.imageUrl || '',
+        }
       } as Event;
     });
   } catch (error) {
