@@ -17,8 +17,10 @@ export default function EventList() {
   async function loadEvents() {
     try {
       const data = await getEvents();
+      console.log('Loaded events:', JSON.stringify(data, null, 2));
       setEvents(data);
     } catch (err) {
+      console.error('Error in loadEvents:', err);
       setError('Failed to load events');
     } finally {
       setLoading(false);
@@ -28,24 +30,34 @@ export default function EventList() {
   function renderEvent({ item: event }: { item: Event }) {
     return (
       <View style={styles.eventCard}>
+        {/* Commenting out organizer section for now
         <View style={styles.organizerSection}>
           {event.organizer.imageUrl ? (
             <Image 
               source={{ uri: event.organizer.imageUrl }}
               style={styles.organizerImage}
-              onError={(error) => console.warn('Error loading organizer image:', error.nativeEvent.error)}
+              onError={(error) => console.error('Organizer image error:', error.nativeEvent.error, 'URL:', event.organizer.imageUrl)}
             />
           ) : (
             <View style={[styles.organizerImage, styles.placeholderImage]} />
           )}
           <Text style={styles.organizerName}>{event.organizer.name}</Text>
         </View>
+        */}
         {event.images.poster ? (
           <Image
             source={{ uri: event.images.poster }}
             style={styles.eventImage}
             resizeMode="cover"
-            onError={(error) => console.warn('Error loading event image:', error.nativeEvent.error)}
+            onLoadStart={() => console.log('Starting to load image:', event.images.poster)}
+            onLoad={() => console.log('Successfully loaded image:', event.images.poster)}
+            onError={(error) => {
+              console.error('Event image error details:', {
+                url: event.images.poster,
+                error: error.nativeEvent.error,
+                eventTitle: event.title
+              });
+            }}
           />
         ) : (
           <View style={[styles.eventImage, styles.placeholderImage]} />
@@ -53,7 +65,6 @@ export default function EventList() {
         <Text style={styles.title}>{event.title}</Text>
         <Text style={styles.date}>{format(event.date, 'PPP')}</Text>
         <Text style={styles.location}>{event.location.name}</Text>
-        <Text style={styles.description}>{event.description.short}</Text>
         <Pressable 
           style={styles.viewButton}
           onPress={() => {
@@ -91,6 +102,15 @@ export default function EventList() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>DapDap Events</Text>
+      
+      {/* Add Create Event button */}
+      <Pressable
+        style={styles.createButton}
+        onPress={() => router.push('/event/create')}
+      >
+        <Text style={styles.createButtonText}>Create New Event</Text>
+      </Pressable>
+      
       <FlatList
         data={events}
         renderItem={renderEvent}
@@ -188,5 +208,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  createButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  createButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

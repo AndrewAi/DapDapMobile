@@ -3,11 +3,21 @@ import { db } from '../config/firebase';
 
 const storage = getStorage();
 
-export async function uploadImage(file: File, path: string): Promise<string> {
+export async function uploadImage(uri: string, path: string): Promise<string> {
   try {
+    // Convert uri to blob
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    // Create storage reference
     const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
+    
+    // Upload file
+    await uploadBytes(storageRef, blob);
+    
+    // Get download URL
     const downloadURL = await getDownloadURL(storageRef);
+    
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image:', error);

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where, doc, setDoc } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
@@ -35,20 +35,37 @@ export async function getEvents(): Promise<Event[]> {
     const snapshot = await getDocs(eventsRef);
     return snapshot.docs.map(doc => {
       const data = doc.data();
+      
+      // Fix image URLs if needed
+      let posterUrl = null;
+      if (data.images?.poster) {
+        // Check if URL needs to be fixed
+        const url = data.images.poster;
+        if (url.includes('firebasestorage') && !url.includes('?alt=media')) {
+          // Add the alt=media parameter if missing
+          posterUrl = `${url}?alt=media`;
+        } else {
+          posterUrl = url;
+        }
+      }
+      
+      console.log('Event data:', {
+        title: data.title,
+        posterUrl,
+        originalUrl: data.images?.poster
+      });
+      
       return {
         ...data,
-        date: data.date.toDate(), // Convert Firestore Timestamp to Date
-        // Ensure images object exists
+        date: data.date.toDate(),
         images: {
-          poster: data.images?.poster || '',
+          poster: posterUrl,
           gallery: data.images?.gallery || [],
         },
-        // Ensure organizer object exists
         organizer: {
           name: data.organizer?.name || 'Unknown Organizer',
-          imageUrl: data.organizer?.imageUrl || '',
+          imageUrl: data.organizer?.imageUrl || null,
         },
-        // Ensure slug exists
         slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-'),
       } as Event;
     });
@@ -70,21 +87,49 @@ export async function getEventBySlug(slug: string): Promise<Event | null> {
     }
 
     const data = snapshot.docs[0].data();
+    
+    // Fix image URLs if needed
+    let posterUrl = null;
+    if (data.images?.poster) {
+      // Check if URL needs to be fixed
+      const url = data.images.poster;
+      if (url.includes('firebasestorage') && !url.includes('?alt=media')) {
+        // Add the alt=media parameter if missing
+        posterUrl = `${url}?alt=media`;
+      } else {
+        posterUrl = url;
+      }
+    }
+    
     return {
       ...data,
       date: data.date.toDate(),
       images: {
-        poster: data.images?.poster || '',
+        poster: posterUrl,
         gallery: data.images?.gallery || [],
       },
       organizer: {
         name: data.organizer?.name || 'Unknown Organizer',
-        imageUrl: data.organizer?.imageUrl || '',
+        imageUrl: data.organizer?.imageUrl || null,
       },
       slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-'),
     } as Event;
   } catch (error) {
     console.error('Error fetching event:', error);
     return null;
+  }
+}
+
+export async function addEvent(eventData: any): Promise<string> {
+  try {
+    const eventRef = doc(collection(db, 'events'));
+    await setDoc(eventRef, {
+      id: eventRef.id,
+      ...eventData
+    });
+    return eventRef.id;
+  } catch (error) {
+    console.error('Error adding event:', error);
+    throw error;
   }
 } 
