@@ -1,13 +1,45 @@
-import { View, StyleSheet, Image, ScrollView, Linking, Platform, StatusBar } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, StyleSheet, Image, ScrollView, Linking, Platform, StatusBar, FlatList } from 'react-native';
 import { Text, Button, IconButton } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Event, getEventImages } from '../../src/services/eventService';
+import { format } from 'date-fns';
 
 export default function EventDetail() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   
   // Parse the event data from params
-  const event = JSON.parse(params.event as string);
+  const event = JSON.parse(params.event as string) as Event;
+  
+  useEffect(() => {
+    // Debug log to check event data
+    console.log('Event data:', event);
+    console.log('Website URL:', event.website_url);
+    
+    // Load gallery images if the event has an ID
+    if (event.id) {
+      loadGalleryImages(event.id);
+    }
+  }, [event.id]);
+  
+  const loadGalleryImages = async (eventId: string) => {
+    try {
+      const images = await getEventImages(eventId);
+      setGalleryImages(images);
+    } catch (error) {
+      console.error('Error loading gallery images:', error);
+    }
+  };
+  
+  const renderGalleryImage = ({ item }: { item: string }) => (
+    <Image 
+      source={{ uri: item }} 
+      style={styles.galleryImage} 
+      resizeMode="cover"
+    />
+  );
   
   return (
     <View style={styles.container}>
@@ -15,31 +47,35 @@ export default function EventDetail() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.imageContainer}>
           <Image
-            source={typeof event.imageUrl === 'string' 
-              ? { uri: event.imageUrl } 
-              : event.imageUrl
-            }
+            source={{ uri: event.images.poster }}
             style={styles.backgroundImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
 
         <View style={styles.detailsSection}>
           <Text style={styles.eventTitle}>{event.title}</Text>
           <Text style={styles.eventTime}>
-            {new Date(event.date).toLocaleDateString('en-IE', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              hour: 'numeric',
-              minute: 'numeric',
-              hour12: true
-            })}
+            {format(new Date(event.date), 'EEEE, MMMM d, h:mm a')}
           </Text>
-          <Text style={styles.eventVenue}>{event.location}</Text>
+          <Text style={styles.eventVenue}>{event.location.name}</Text>
           
           <Text style={styles.descriptionTitle}>Description</Text>
-          <Text style={styles.descriptionText}>{event.description}</Text>
+          <Text style={styles.descriptionText}>{event.description.full}</Text>
+          
+          {galleryImages.length > 0 && (
+            <View style={styles.gallerySection}>
+              <Text style={styles.galleryTitle}>Gallery</Text>
+              <FlatList
+                data={galleryImages}
+                renderItem={renderGalleryImage}
+                keyExtractor={(item, index) => `gallery-image-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.galleryList}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -57,8 +93,8 @@ export default function EventDetail() {
           mode="contained"
           style={styles.websiteButton}
           labelStyle={styles.websiteButtonText}
-          onPress={() => event.websiteUrl ? Linking.openURL(event.websiteUrl) : null}
-          disabled={!event.websiteUrl}
+          onPress={() => event.website_url ? Linking.openURL(event.website_url) : null}
+          disabled={!event.website_url}
         >
           Go to Event Website
         </Button>
@@ -73,10 +109,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   imageContainer: {
-    height: 600,
+    height: 300,
     position: 'relative',
     zIndex: 1,
-    marginTop: -50,
     backgroundColor: '#000',
   },
   backgroundImage: {
@@ -91,36 +126,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
     elevation: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  titleContainer: {
-    backgroundColor: '#FFCC00',
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  bandName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  venueName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  dateTime: {
-    fontSize: 16,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: '#fff',
-    textAlign: 'center',
   },
   detailsSection: {
     padding: 16,
@@ -150,6 +155,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     marginBottom: 24,
+    lineHeight: 24,
+  },
+  gallerySection: {
+    marginBottom: 24,
+  },
+  galleryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  galleryList: {
+    gap: 8,
+  },
+  galleryImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
   },
   websiteButton: {
     backgroundColor: '#6366f1',
@@ -159,24 +181,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  organizerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  organizerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  organizerName: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
   scrollContent: {
     paddingBottom: 100,
-    flexGrow: 1,
   },
   floatingButtonContainer: {
     position: 'absolute',
