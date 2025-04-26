@@ -1,15 +1,45 @@
-import { View, StyleSheet, Image, ScrollView, Linking, Platform, StatusBar } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, StyleSheet, Image, ScrollView, Linking, Platform, StatusBar, FlatList } from 'react-native';
 import { Text, Button, IconButton } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Event } from '../../src/services/eventService';
+import { Event, getEventImages } from '../../src/services/eventService';
 import { format } from 'date-fns';
 
 export default function EventDetail() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   
   // Parse the event data from params
   const event = JSON.parse(params.event as string) as Event;
+  
+  useEffect(() => {
+    // Debug log to check event data
+    console.log('Event data:', event);
+    console.log('Website URL:', event.website_url);
+    
+    // Load gallery images if the event has an ID
+    if (event.id) {
+      loadGalleryImages(event.id);
+    }
+  }, [event.id]);
+  
+  const loadGalleryImages = async (eventId: string) => {
+    try {
+      const images = await getEventImages(eventId);
+      setGalleryImages(images);
+    } catch (error) {
+      console.error('Error loading gallery images:', error);
+    }
+  };
+  
+  const renderGalleryImage = ({ item }: { item: string }) => (
+    <Image 
+      source={{ uri: item }} 
+      style={styles.galleryImage} 
+      resizeMode="cover"
+    />
+  );
   
   return (
     <View style={styles.container}>
@@ -32,6 +62,20 @@ export default function EventDetail() {
           
           <Text style={styles.descriptionTitle}>Description</Text>
           <Text style={styles.descriptionText}>{event.description.full}</Text>
+          
+          {galleryImages.length > 0 && (
+            <View style={styles.gallerySection}>
+              <Text style={styles.galleryTitle}>Gallery</Text>
+              <FlatList
+                data={galleryImages}
+                renderItem={renderGalleryImage}
+                keyExtractor={(item, index) => `gallery-image-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.galleryList}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -49,8 +93,8 @@ export default function EventDetail() {
           mode="contained"
           style={styles.websiteButton}
           labelStyle={styles.websiteButtonText}
-          onPress={() => event.websiteUrl ? Linking.openURL(event.websiteUrl) : null}
-          disabled={!event.websiteUrl}
+          onPress={() => event.website_url ? Linking.openURL(event.website_url) : null}
+          disabled={!event.website_url}
         >
           Go to Event Website
         </Button>
@@ -112,6 +156,22 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 24,
     lineHeight: 24,
+  },
+  gallerySection: {
+    marginBottom: 24,
+  },
+  galleryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  galleryList: {
+    gap: 8,
+  },
+  galleryImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
   },
   websiteButton: {
     backgroundColor: '#6366f1',
